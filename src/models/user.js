@@ -37,7 +37,6 @@ const userSchema = new mongoose.Schema({
         values: ["male","female","other"],
         message: "Please select male, female or other"
        },
-       default: "male"
     },
 },{timestamps: true})
 

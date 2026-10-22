@@ -2,28 +2,83 @@ const express = require("express");
 const connectDb = require("./config/database")
 const User = require("./models/user")
 const app = express();
+const validator = require("validator")
+const validation = require("./utils/validation")
+const bcrypt = require("bcrypt")
 
 app.use(express.json());
 
 
 app.post("/signup", async (req,res)=>{
 
-  // static way of creating the user instance
-  // const user = new User({
-  //   firstName: "Rupeshwar",
-  //   lastName: "Sah",
-  //   emailId: "dummy@gmail.com",
-  //   password:  "abcdefgh",
-  // })
 
-  // dynamic way of creating the user instance
-  const user = new User(req.body)
-
+  
   try{
+    
+    validation(req);
+
+    // encrypting the password
+
+    const {firstName, lastName, emailId, password} = req.body;
+
+    const hashPassword = await bcrypt.hash(password, 12);
+
+    const user = new User({
+      firstName: firstName,
+      lastName: lastName,
+      emailId: emailId,
+      password: hashPassword
+    })
+
     await user.save();
     res.send("Data sent successfully");
   }catch(err){
-    res.status(400).send("Error saving the user: ", err);
+    res.status(400).json({
+      success: false,
+      error: err.message
+    });
+  }
+})
+
+app.post("/login", async (req,res)=>{
+  try{
+
+    const {emailId, password} = req.body;
+
+    if (
+      typeof emailId !== "string" ||
+      typeof password !== "string" ||
+      !emailId.trim() ||
+      !password
+    ) {
+      return res.status(400).send(
+        "Email and password are required"
+      );
+    }
+
+    const user = await User.findOne({emailId});
+
+    if(!user){
+      throw new Error("Invalid Credentials");
+    }
+
+    const hashPassword = user.password;
+
+    const isPasswordValid = await bcrypt.compare(password, hashPassword);
+
+
+    if(isPasswordValid){
+      res.status(200).send("Login successfull!!!");
+    }else{
+      throw new Error("Invalid Credentials");
+    }
+    
+
+  }catch(err){
+    res.status(400).json({
+      success: false,
+      error: err.message
+    });
   }
 })
 
