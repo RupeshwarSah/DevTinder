@@ -5,14 +5,15 @@ const app = express();
 const validator = require("validator")
 const validation = require("./utils/validation")
 const bcrypt = require("bcrypt")
+const cookieParser = require("cookie-parser")
+const jwt = require('jsonwebtoken')
+require('dotenv').config();
 
 app.use(express.json());
-
+app.use(cookieParser());
 
 app.post("/signup", async (req,res)=>{
-
-
-  
+ 
   try{
     
     validation(req);
@@ -68,11 +69,43 @@ app.post("/login", async (req,res)=>{
 
 
     if(isPasswordValid){
+
+      const token = jwt.sign({id: user._id},process.env.JWT_SECRET,{
+    expiresIn: "1d",
+    })
+
+      res.cookie('token',token);
       res.status(200).send("Login successfull!!!");
     }else{
       throw new Error("Invalid Credentials");
     }
     
+
+  }catch(err){
+    res.status(400).json({
+      success: false,
+      error: err.message
+    });
+  }
+})
+
+app.get('/profile', async(req,res)=>{
+  try{
+
+    // console.log(req.cookies);
+
+    const token = req.cookies.token;
+    if(!token){
+      throw new Error("Please login first");
+    }
+
+    const decoded = jwt.verify(token,process.env.JWT_SECRET);
+    // console.log(decoded);
+
+    const userId = decoded.id;
+    const user = await User.findById(userId);
+
+    res.status(200).send(user);
 
   }catch(err){
     res.status(400).json({
