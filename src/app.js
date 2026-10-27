@@ -6,7 +6,8 @@ const validator = require("validator")
 const validation = require("./utils/validation")
 const bcrypt = require("bcrypt")
 const cookieParser = require("cookie-parser")
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const { userAuth } = require("./middleware/auth");
 require('dotenv').config();
 
 app.use(express.json());
@@ -63,16 +64,12 @@ app.post("/login", async (req,res)=>{
       throw new Error("Invalid Credentials");
     }
 
-    const hashPassword = user.password;
-
-    const isPasswordValid = await bcrypt.compare(password, hashPassword);
+    const isPasswordValid = user.comparePassword(password);
 
 
     if(isPasswordValid){
 
-      const token = jwt.sign({id: user._id},process.env.JWT_SECRET,{
-    expiresIn: "1d",
-    })
+      const token = user.getJWT();
 
       res.cookie('token',token);
       res.status(200).send("Login successfull!!!");
@@ -89,21 +86,12 @@ app.post("/login", async (req,res)=>{
   }
 })
 
-app.get('/profile', async(req,res)=>{
+app.get('/profile',userAuth, async(req,res)=>{
   try{
 
     // console.log(req.cookies);
 
-    const token = req.cookies.token;
-    if(!token){
-      throw new Error("Please login first");
-    }
-
-    const decoded = jwt.verify(token,process.env.JWT_SECRET);
-    // console.log(decoded);
-
-    const userId = decoded.id;
-    const user = await User.findById(userId);
+    const user = req.user;
 
     res.status(200).send(user);
 
@@ -115,19 +103,7 @@ app.get('/profile', async(req,res)=>{
   }
 })
 
-app.get("/users", async(req,res)=>{
 
-  try{
-    const user = await User.find({emailId: req.body.emailId});
-    if(user.length===0){
-      res.status(404).send("No user found")
-    }
-    res.send(user);
-
-  }catch(err){
-    res.status(500).send(err);
-  }
-})
 
 app.get("/feed", async(req, res)=>{
   try{
@@ -141,26 +117,7 @@ app.get("/feed", async(req, res)=>{
   }
 })
 
-app.delete("/users", async(req,res)=>{
-  const userId = req.body.userId;
-  try{
-    await User.findByIdAndDelete(userId);
-    res.send("User deleted successfully");
-  }catch(err){
-    res.status(500).send(err);
-  }
-})
 
-app.patch("/users", async(req,res)=>{
-  const userId = req.body.userId;
-  const data = req.body;
-  try{
-    const user = await User.findByIdAndUpdate(userId, data)
-    res.send("user updated successfully");
-  }catch(err){
-    res.status(500).send(err)
-  }
-})
 
 connectDb().then(()=>{
     console.log("Database connection established")
