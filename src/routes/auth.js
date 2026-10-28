@@ -1,8 +1,9 @@
 const express = require("express");
-const validation = require("../utils/validation");
+const {validation} = require("../utils/validation");
 const router = express.Router();
 const bcrypt = require("bcrypt")
 const User = require("../models/user")
+
 
 router.post("/signup", async (req,res)=>{
  try{
@@ -42,7 +43,7 @@ router.post("/login", async (req,res)=>{
       !emailId.trim() ||
       !password
     ) {
-      return res.status(400).send(
+      return res.status(401).send(
         "Email and password are required"
       );
     }
@@ -53,7 +54,7 @@ router.post("/login", async (req,res)=>{
       throw new Error("Invalid Credentials");
     }
 
-    const isPasswordValid = user.comparePassword(password);
+    const isPasswordValid = await user.comparePassword(password);
 
 
     if(isPasswordValid){
@@ -73,6 +74,13 @@ router.post("/login", async (req,res)=>{
       error: err.message
     });
   }
+})
+
+router.post("/logout", async(req,res)=>{
+    res.cookie('token', null, {
+        expires: new Date(Date.now()),
+    })
+    res.status(200).send("Logout successfull");
 })
 
 module.exports = router;

@@ -12,7 +12,7 @@ app.use(cookieParser());
 
 
 app.use('/',authRouter)
-app.use("/",profileRouter)
+app.use('/',profileRouter)
 
 
 
